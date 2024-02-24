@@ -1,0 +1,15 @@
+{
+  "service": {
+    "id": "haproxy-sync",
+    "name": "haproxy-sync",
+    "port": 10000
+  },
+  "check": {
+    "id": "haproxy peer sync",
+    "name": "haproxy peer sync tcp port",
+    "tcp": ":10000",
+    "interval": "10s",
+    "timeout": "3s"
+  }
+}
+

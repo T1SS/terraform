@@ -1,0 +1,14 @@
+{
+  "watches": [
+    {
+      "type": "checks",
+      "state": "passing",
+      "args": ["sh", "-c", "pfexec /usr/local/bin/haproxy-reload.sh >> /var/db/consul/watch.log 2>&1"]
+    },
+    {
+      "type": "key",
+      "key": "appconfig/haproxy/certs/haproxy.pem",
+      "args": ["sh", "-c", "export WATCH=1;pfexec /usr/local/bin/certs.sh >> /var/db/consul/watch.log 2>&1"]
+    }
+  ]
+}

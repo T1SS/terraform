@@ -1,0 +1,269 @@
+{{ define "backend" }}
+backend b_{{ .Name }}-{{ env "FABRIC_ID" }}.svc.{{ env "EXT_TCNS_DOMAIN" }}
+  compression algo gzip
+  option httpchk
+  {{- if index .ServiceMeta "haproxy_balance" }}
+  balance {{ index .ServiceMeta "haproxy_balance" }}
+  {{- end }}
+  {{- if index .ServiceMeta "haproxy_timeout_server" }}
+  timeout server {{ index .ServiceMeta "haproxy_timeout_server" }}
+  {{- end }}
+  {{- if and (index .ServiceMeta "haproxy_path") (index .ServiceMeta "haproxy_method") }}
+  acl p_root path -i /
+  http-request set-path {{ index .ServiceMeta "haproxy_path" }} if p_root
+  http-check send meth {{ index .ServiceMeta "haproxy_method" | toUpper }} uri {{ or (index .ServiceMeta "haproxy_check_uri") (index .ServiceMeta "haproxy_path") }} ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}
+  {{- else }}
+  http-check send meth GET uri / ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}{{ end }}
+  {{- if index .ServiceMeta "haproxy_expect_status" }}
+  http-check expect status {{ index .ServiceMeta "haproxy_expect_status" | parseInt }}
+  {{- else }}
+  http-check expect status 200{{ end }}
+  {{ range service .Name }}
+  server {{ .Node }} {{.Address}}:{{.Port}} check{{ end }}
+{{ end }}
+
+{{- define "sticky-backend" }}
+backend b_{{ .Name }}-{{ env "FABRIC_ID" }}.svc.{{ env "EXT_TCNS_DOMAIN" }}
+  compression algo gzip
+  option httpchk
+  {{- if index .ServiceMeta "haproxy_balance" }}
+  balance {{ index .ServiceMeta "haproxy_balance" }}
+  {{- end }}
+  {{- if index .ServiceMeta "haproxy_timeout_server" }}
+  timeout server {{ index .ServiceMeta "haproxy_timeout_server" }}
+  {{- end }}
+  {{- if and (index .ServiceMeta "haproxy_path") (index .ServiceMeta "haproxy_method") }}
+  acl p_root path -i /
+  http-request set-path {{ index .ServiceMeta "haproxy_path" }} if p_root
+  http-check send meth {{ index .ServiceMeta "haproxy_method" | toUpper }} uri {{ or (index .ServiceMeta "haproxy_check_uri") (index .ServiceMeta "haproxy_path") }} ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}
+  {{- else }}
+  http-check send meth GET uri / ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}{{ end }}
+  {{- if index .ServiceMeta "haproxy_expect_status" }}
+  http-check expect status {{ index .ServiceMeta "haproxy_expect_status" | parseInt }}
+  {{- else }}
+  http-check expect status 200{{ end }}
+  cookie SRV insert indirect nocache
+  {{ range service .Name }}
+  server {{ .Node }} {{.Address}}:{{.Port}} check cookie {{ .Node | regexReplaceAll "([a-z0-9]+)-([a-z0-9]+)" "$2" }}{{ end }}
+{{ end -}}
+
+{{ define "int-backend" }}
+backend b_{{ .Name }}-{{ env "FABRIC_ID" }}.svc.{{ env "INT_TCNS_DOMAIN" }}
+  compression algo gzip
+  option httpchk
+  {{- if index .ServiceMeta "haproxy_balance" }}
+  balance {{ index .ServiceMeta "haproxy_balance" }}
+  {{- end }}
+  {{- if index .ServiceMeta "haproxy_timeout_server" }}
+  timeout server {{ index .ServiceMeta "haproxy_timeout_server" }}
+  {{- end }}
+  {{- if and (index .ServiceMeta "haproxy_path") (index .ServiceMeta "haproxy_method") }}
+  acl p_root path -i /
+  http-request set-path {{ index .ServiceMeta "haproxy_path" }} if p_root
+  http-check send meth {{ index .ServiceMeta "haproxy_method" | toUpper }} uri {{ or (index .ServiceMeta "haproxy_check_uri") (index .ServiceMeta "haproxy_path") }} ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}
+  {{- else }}
+  http-check send meth GET uri / ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}{{ end }}
+  {{- if index .ServiceMeta "haproxy_expect_status" }}
+  http-check expect status {{ index .ServiceMeta "haproxy_expect_status" | parseInt }}
+  {{- else }}
+  http-check expect status 200{{ end }}
+  {{ range service .Name }}
+  server {{ .Node }} {{.Address}}:{{.Port}} check inter 120s{{ end }}
+{{ end }}
+
+{{- define "int-sticky-backend" }}
+backend b_{{ .Name }}-{{ env "FABRIC_ID" }}.svc.{{ env "INT_TCNS_DOMAIN" }}
+  compression algo gzip
+  option httpchk
+  {{- if index .ServiceMeta "haproxy_balance" }}
+  balance {{ index .ServiceMeta "haproxy_balance" }}
+  {{- end }}
+  {{- if index .ServiceMeta "haproxy_timeout_server" }}
+  timeout server {{ index .ServiceMeta "haproxy_timeout_server" }}
+  {{- end }}
+  {{- if and (index .ServiceMeta "haproxy_path") (index .ServiceMeta "haproxy_method") }}
+  acl p_root path -i /
+  http-request set-path {{ index .ServiceMeta "haproxy_path" }} if p_root
+  http-check send meth {{ index .ServiceMeta "haproxy_method" | toUpper }} uri {{ or (index .ServiceMeta "haproxy_check_uri") (index .ServiceMeta "haproxy_path") }} ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}
+  {{- else }}
+  http-check send meth GET uri / ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}{{ end }}
+  {{- if index .ServiceMeta "haproxy_expect_status" }}
+  http-check expect status {{ index .ServiceMeta "haproxy_expect_status" | parseInt }}
+  {{- else }}
+  http-check expect status 200{{ end }}
+  cookie SRV insert indirect nocache
+  {{ range service .Name }}
+  server {{ .Node }} {{.Address}}:{{.Port}} check cookie {{ .Node | regexReplaceAll "([a-z0-9]+)-([a-z0-9]+)" "$2" }} inter 120s{{ end }}
+{{ end -}}
+
+{{- define "tcns-backend" }}
+backend b_{{ .external_service_name }}.svc.{{ env "EXT_TCNS_DOMAIN" }}
+  compression algo gzip
+  option httpchk
+  {{- if .haproxy_balance }}
+  balance {{ .haproxy_balance }}
+  {{- end }}
+  {{- if and .haproxy_path .haproxy_method }}
+  acl p_root path -i /
+  http-request set-path {{ .haproxy_path }} if p_root
+  http-check send meth {{ .haproxy_method | toUpper }} uri {{ or .haproxy_check_uri .haproxy_path }} ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}
+  {{- else }}
+  http-check send meth GET uri / ver HTTP/1.1 hdr host {{ env "HOSTNAME" }}{{ end }}
+  {{- if .haproxy_timeout_server }}
+  timeout server {{ .haproxy_timeout_server }}
+  {{ end }}
+  {{- if .haproxy_expect_status }}
+  http-check expect status {{ .haproxy_expect_status }}
+  {{- end }}
+  {{ if .haproxy_fabric | parseBool }}
+  server-template tcns-{{ .internal_service_name }} {{ .haproxy_expect_nodes }} {{ .internal_service_name }}.svc.{{ env "INT_TCNS_DOMAIN" }}:{{ .internal_service_port }} resolvers tcns init-addr none check inter 15s maxconn 64
+  {{- else }}
+  server-template tcns-{{ .internal_service_name }} {{ .haproxy_expect_nodes }} {{ .internal_service_name }}.svc.{{ env "EXT_TCNS_DOMAIN" }}:{{ .internal_service_port }} resolvers tcns init-addr none check inter 15s maxconn 64
+  {{- end }}
+{{ end -}}
+
+global
+  setenv hostname {{ env "HOSTNAME" }}
+  master-worker
+  daemon
+  pidfile /var/run/haproxy.pid
+  stats socket /var/run/haproxy.sock mode 777 level admin expose-fd listeners
+  description Fabric {{ env "FABRIC_ID" }} HAProxy ingress
+  log 127.0.0.1:514 daemon info
+  log-send-hostname {{ env "HOSTNAME" }}
+  log-tag haproxy
+  ssl-default-bind-options no-tlsv10 no-tlsv11
+  spread-checks 25
+  server-state-file /opt/local/etc/haproxy.state
+  hard-stop-after 45s
+
+peers mypeers
+{{ if service "haproxy-sync|any" }}
+    server {{ env "HOSTNAME" }} # local node
+    {{- range service "haproxy-sync" }}
+    {{- if eq .Node (env "HOSTNAME") }}
+    {{- else }}
+    server {{ .Node }} {{.Address}}:{{.Port}} # remote peer
+    {{- end }}
+    {{- end }}
+{{- end }}
+    bind :10000
+    table src_tracking type string size 10m store http_req_rate(10s),http_req_cnt
+
+resolvers consul
+  nameserver consul 127.0.0.1:8600
+  accepted_payload_size 8192
+
+resolvers tcns
+  nameserver tcns1 {{ env "DNS1" }}:53
+  nameserver tcns2 {{ env "DNS2" }}:53
+  accepted_payload_size 8192
+
+defaults
+  option socket-stats
+  default-server init-addr none inter 30s rise 2 fall 2
+  mode http
+  timeout client 30s
+  timeout client-fin 30s
+  timeout connect 4s
+  timeout http-keep-alive 10s
+  timeout http-request 5s
+  timeout server 30s
+  log global
+  option httplog
+  option dontlog-normal
+  load-server-state-from-file global
+
+frontend syslog-relp
+  mode tcp
+  option tcplog
+  bind 127.0.0.1:20514
+  use_backend relp-pool
+
+backend relp-pool
+  balance roundrobin
+  mode tcp
+  option tcp-check
+  tcp-check send check
+  tcp-check expect string serverclose
+
+  server-template syslog-relp 2 {{ env "SYSLOG_UPSTREAM" }}:20514 resolvers tcns init-addr none check inter 15s maxconn 64
+
+frontend http-in
+  bind *:80
+  {{- if env "CERT_ON_DISK" | parseBool }}
+  bind *:443 ssl crt /opt/local/etc/haproxy.pem
+  {{- if env "FORCE_SSL" | parseBool }}
+  http-request redirect scheme https unless { ssl_fc }
+  {{- end }}
+  {{- end }}
+  maxconn 2000
+
+  {{ if env "XDC" | parseBool }}
+  use_backend b_%[req.hdr(Host),lower,word(1,:),regsub('\.{{ env "XDC_NAME" }}\.','.{{ env "CONSUL_DC" }}.','g')]
+  {{ else }}
+  use_backend b_%[req.hdr(Host),lower,word(1,:)]
+  {{ end }}
+
+{{ range services }}
+{{- /* set a default flag "true" for runExecuteTemplate */}}
+{{- scratch.Set "runExecuteTemplate" "true" }}
+{{- /* get all registered services from consul */}}
+{{- range service .Name }}
+{{- /*
+    If we find '{ meta: {"haproxy": "true" }}' key set
+    to "true" for a consul service definition try and execute
+    the template of our choice - but only if runExecuteTemplate
+    is also set to "true".
+*/}}
+{{- if index .ServiceMeta "haproxy" | parseBool }}
+{{- if scratch.Get "runExecuteTemplate" | parseBool }}
+{{- if index .ServiceMeta "haproxy_sticky" | parseBool }}
+{{- executeTemplate "sticky-backend" . }}
+{{- executeTemplate "int-sticky-backend" . }}
+{{- else }}
+{{- executeTemplate "backend" . }}
+{{- executeTemplate "int-backend" . }}
+{{- end }}
+{{- /*
+    Setting runExecuteTemplate to "false" is required to
+    only ever execute the template once for a service.
+
+    Otherwise the range function will iterate over each node
+    in the service group and execute the same template for each
+    node in the service group.
+
+    This would generate the backend stanza multiplied by the
+    number of nodes in the service group containing each node.
+    Which is not what we want.
+*/}}
+{{- scratch.Set "runExecuteTemplate" "false" }}
+{{ end }}{{ end }}{{ end }}{{ end }}
+
+# Empty dummy backend for SSL node checks only
+backend b_{{ index (env "HOSTNAME" | split "-") 0 }}.svc.{{ env "EXT_TCNS_DOMAIN" }}
+  http-request return status 200 content-type "application/json" lf-string '{"your_ip":"%[src]", "server":"%[env(hostname)]", "zone_uuid":"%[env(SMF_ZONENAME)]"}'
+
+{{ if env "TCNS_SD_ON" | parseBool }}
+  {{- with $tcns_svc := env "TCNS_SD_JSON" | parseJSON }}
+    {{- range $tcns_svc }}
+      {{- executeTemplate "tcns-backend" . }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+frontend stats
+  bind *:8080
+  {{- if env "CERT_ON_DISK" | parseBool }}
+  bind *:8443 ssl crt /opt/local/etc/haproxy.pem
+  {{- end }}
+  mode http
+  http-request use-service prometheus-exporter if { path /metrics }
+  option httpclose
+  stats enable
+  stats uri /stats
+  stats show-legends
+  stats show-desc (Please note: b_{{ index (env "HOSTNAME" | split "-") 0 }} is an empty dummy backend for SSL checks only)
+  stats show-node
+  stats refresh 10
+

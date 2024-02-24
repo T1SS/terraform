@@ -1,0 +1,13 @@
+{
+  "service": {
+    "name": "myservice",
+    "port": 80,
+    "meta": {
+      "haproxy": "true",
+      "haproxy_method": "GET",
+      "haproxy_expect_status": "200",
+      "haproxy_path": "/myservice/",
+      "haproxy_balance": "random"
+    }
+  }
+}
