@@ -42,3 +42,6 @@ services/
     |-- variables.tf
     `-- versions.tf
 ```
+
+The general concept and design is described in the [Building repeatable infrastructure with fabrics](doc/fabric_model.md) document.
+
